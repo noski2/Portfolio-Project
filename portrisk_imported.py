@@ -1,12 +1,10 @@
 import numpy as np
 import pandas as pd
-import scipy
 import matplotlib.pyplot as plt
 from pathlib import Path
 from sklearn.decomposition import PCA
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
-
 
 
 path = 'C:\\Users\\shark\\portfolio project\\nasdaq_data\\'
@@ -35,21 +33,27 @@ def trim_portfolio(portfolio):
     return (trimmed_portfolio.drop(portfolio_mean_sorted.tail(20).index, axis = 1), 
            portfolio_mean.drop(portfolio_mean_sorted.tail(20).index))
 
-def calculate_stock_return(stock_return, weight):
-    return stock_return.dot(weight)
-
-def calculate_stock_volatility(weight, covariance):
-    return np.sqrt(np.dot(weight, np.dot(weight, covariance)))
+def calculate_portfolio_volatility(weight, covariance):
+    return np.sqrt(np.dot(weight, np.dot(weight, covariance * 252)))
 
 def calculate_sharpe_ratio(stock_return, stock_volatility):
     return(stock_return / stock_volatility)
 
-def optimize_portfolio(portfolio_mean, portfolio):
-    annualized_returns = portfolio_mean * 252 
-    return 0
+def optimize_portfolio(num_portfolios, portfolio_mean, portfolio):
+    port_returns = ()
+    port_vols = ()
+    for x in range(num_portfolios):
+        weights = generate_weight(num_portfolios)
+        port_returns.append(calculate_expected_return(portfolio_mean, weights) * 252)
+        port_vols.append(calculate_portfolio_volatility(weights, np.cov(portfolio)))
+        port_returns = np.array(port_returns)
+        port_vols = np.array(port_vols)
+    portfolios = pd.DataFrame({'Return': port_returns, 'Volatility': port_vols})
+    fig = portfolios.plot(x='Volatility', y = 'Return', kind = 'scatter', figsize= (16, 12))
+    plt.xlabel('Expected Volatility')
+    plt.ylabel('Expected Return')
+    return fig
 
-plt.figure(figsize= (20, 10))
-plt.scatter()
 
 def calculate_weight(df, portfolio):
     df_close = df.pivot(index = 'date', columns = 'stock', values = 'close')

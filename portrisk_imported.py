@@ -36,8 +36,6 @@ def trim_portfolio(portfolio):
 def calculate_portfolio_volatility(weight, covariance):
     return np.sqrt(np.dot(weight.T, np.dot(weight, covariance * 252)))
 
-def calculate_sharpe_ratio(stock_return, stock_volatility):
-    return(stock_return / stock_volatility)
 
 def display_assets(portfolio, portfolio_mean):
     asset_returns = portfolio_mean.to_numpy() * 252
@@ -55,18 +53,26 @@ def optimize_portfolio(num_portfolios, portfolio_mean, portfolio):
     portfolio.apply(lambda x: np.log(1+x))
     port_returns = list()
     port_vols = list()
+    weights = list()
     for x in range(num_portfolios):
-        weights = generate_weight(len(portfolio.columns))
-        port_returns.append(calculate_expected_return(portfolio_mean, weights) * 252)
-        port_vols.append(calculate_portfolio_volatility(weights, portfolio.cov().to_numpy()))
-        
+        class Data:
+            def __init__(self):
+                self.weights = generate_weight(len(portfolio.columns))
+                self.returns = (calculate_expected_return(portfolio_mean, self.weights) * 252)
+                self.volatility = (calculate_portfolio_volatility(self.weights, portfolio.cov().to_numpy()))
+        data = Data()
+        port_returns.append(data.returns)
+        port_vols.append(data.volatility)
+        weights.append(data.weights)
     port_returns = np.array(port_returns)
     port_vols = np.array(port_vols)
+    weights = np.array(weights)
     portfolios = pd.DataFrame({'Return': port_returns, 'Volatility': port_vols})
     fig = portfolios.plot.scatter(x='Volatility', y = 'Return', figsize= (10, 10))
     plt.xlabel('Expected Volatility')
     plt.ylabel('Expected Return')
-    return fig
+    optimal_portfolio = weights[(portfolios['Return']/portfolios['Volatility']).idxmax()]
+    return fig, optimal_portfolio
 
 
 def calculate_weight(df, portfolio):
@@ -137,11 +143,10 @@ trimmed_portfolio, trimmed_portfolio_means = trim_portfolio(portfolio)
 trimmed_portfolio = trimmed_portfolio.dropna(axis=1)
 
 
-asset_plot = display_assets(trimmed_portfolio, trimmed_portfolio_means)
-plt.show()
-plot = optimize_portfolio(10000, trimmed_portfolio_means, trimmed_portfolio)
-plt.show()
-weights = calculate_weight(df, trimmed_portfolio)
+#asset_plot = display_assets(trimmed_portfolio, trimmed_portfolio_means)
+plot, weights = optimize_portfolio(10000, trimmed_portfolio_means, trimmed_portfolio)
+#plt.show()
+#weights = calculate_weight(df, trimmed_portfolio)
 risk = calculate_risk(trimmed_portfolio, weights)
 returns = calculate_expected_return(trimmed_portfolio_means, weights)
 helper_info = Helper_Info(trimmed_portfolio)

@@ -7,10 +7,10 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 
 
-path = 'C:\\Users\\shark\\portfolio project\\nasdaq_data\\'
+path = "nasdaq_data"
 files = Path(path).glob('*.csv')
 df_list = list()
-for file in list(files)[:50]: 
+for file in list(files): 
     data = pd.read_csv(file)
     data['stock'] = file.stem
     if (len(data) > 1 and data['date'].iloc[0] == "2018-11-02"):
@@ -50,7 +50,6 @@ def display_assets(portfolio, portfolio_mean):
     return fig
 
 def optimize_portfolio(num_portfolios, portfolio_mean, portfolio):
-    portfolio.apply(lambda x: np.log(1+x))
     port_returns = list()
     port_vols = list()
     weights = list()
@@ -89,8 +88,8 @@ def calculate_risk(portfolio, weight):
     cov_matrix = portfolio.cov().to_numpy()
     return np.sqrt(weight.T @ cov_matrix @ weight)
 
-def generate_components(df):
-    pca = PCA(n_components=2)
+def generate_components(df, n_components):
+    pca = PCA(n_components= n_components)
     pca.fit(df.transpose())
     return pd.DataFrame(pca.components_).transpose()
 
@@ -134,7 +133,7 @@ def calculate_factor_risk_attribution(components, weights, specific_risk, factor
 
 class Helper_Info:
     def __init__(self, df):
-        self.components = generate_components(df)
+        self.components = generate_components(df, 81)
         self.factor_weights, self.r2, self.intercepts = generate_factor_weights_and_r2(self.components, df)
         self.specific_risk = calculate_specific_risk(df, self.r2)
 
@@ -144,20 +143,19 @@ trimmed_portfolio = trimmed_portfolio.dropna(axis=1)
 
 
 #asset_plot = display_assets(trimmed_portfolio, trimmed_portfolio_means)
-plot, weights = optimize_portfolio(10000, trimmed_portfolio_means, trimmed_portfolio)
+plot, weights = optimize_portfolio(1000, trimmed_portfolio_means, trimmed_portfolio)
 #plt.show()
-#weights = calculate_weight(df, trimmed_portfolio)
+#weights_unoptimized = calculate_weight(df, trimmed_portfolio)
 risk = calculate_risk(trimmed_portfolio, weights)
 returns = calculate_expected_return(trimmed_portfolio_means, weights)
 helper_info = Helper_Info(trimmed_portfolio)
 factor_risk, factor_return = calculate_factor_risk_and_returns(helper_info.components, weights, helper_info.specific_risk, helper_info.factor_weights, helper_info.intercepts)
 position_level_risk_attribution = calculate_position_risk_attribution(trimmed_portfolio, weights, risk)
 factor_risk_attribution = calculate_factor_risk_attribution(helper_info.components, weights, helper_info.specific_risk, helper_info.factor_weights, factor_risk)
-#print(position_level_risk_attribution)
-#print(factor_risk_attribution)
+print("portfolio analysis using optimal weights obtained through efficient frontier")
 print("non factor risk: ", risk)
+print("position based attribution sum :", position_level_risk_attribution.sum())
 print("factor based risk: ", factor_risk)
 print("factor based attribution sum: ", factor_risk_attribution.sum())
-print("position based attribution sum :", position_level_risk_attribution.sum())
-print(returns)
-print(factor_return)
+print("non factor return: ", returns)
+print("facotr based return:", factor_return)

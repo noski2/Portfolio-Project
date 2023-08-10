@@ -123,17 +123,25 @@ def calculate_factor_risk_and_returns(components, weights, specific_risk, factor
 
 def calculate_position_risk_attribution(df, weights, variance):
     marginal_risk = df.cov().to_numpy() @ weights.T
-    return np.multiply(marginal_risk, weights.T)/variance
+    attributions = np.multiply(marginal_risk, weights.T)/variance
+    return attributions, pd.DataFrame({'Stocks': df.columns.values, 'Attribution': attributions}).sort_values(by = 'Attribution')
 
 def calculate_factor_risk_attribution(components, weights, specific_risk, factor_weights, variance):
     bp2 = factor_weights.T @ weights
     marginal_risk = factor_weights @ (components.cov().to_numpy() @ bp2)
     specific_risk_contribution = specific_risk @ weights
-    return (np.multiply(weights.T, (marginal_risk + specific_risk_contribution)))/variance
+    attributions = (np.multiply(weights.T, (marginal_risk + specific_risk_contribution)))/variance
+    attributions_df = pd.DataFrame({'Attributions': attributions})
+    return attributions, attributions_df.sort_values(by= 'Attributions')
 
+def find_riskiest_stocks(attributions, n_stocks):
+    return (attributions.tail(n_stocks)).to_numpy()
+
+def find_riskiest_factors(attributions, n_factors):
+    return (attributions.tail(n_factors)).to_numpy()
 class Helper_Info:
     def __init__(self, df):
-        self.components = generate_components(df, 81)
+        self.components = generate_components(df, 20)
         self.factor_weights, self.r2, self.intercepts = generate_factor_weights_and_r2(self.components, df)
         self.specific_risk = calculate_specific_risk(df, self.r2)
 
@@ -150,8 +158,12 @@ risk = calculate_risk(trimmed_portfolio, weights)
 returns = calculate_expected_return(trimmed_portfolio_means, weights)
 helper_info = Helper_Info(trimmed_portfolio)
 factor_risk, factor_return = calculate_factor_risk_and_returns(helper_info.components, weights, helper_info.specific_risk, helper_info.factor_weights, helper_info.intercepts)
-position_level_risk_attribution = calculate_position_risk_attribution(trimmed_portfolio, weights, risk)
-factor_risk_attribution = calculate_factor_risk_attribution(helper_info.components, weights, helper_info.specific_risk, helper_info.factor_weights, factor_risk)
+position_level_risk_attribution, position_level_risk_attribution_dataframe = calculate_position_risk_attribution(trimmed_portfolio, weights, risk)
+factor_risk_attribution, factor_risk_attribution_dataframe = calculate_factor_risk_attribution(helper_info.components, weights, helper_info.specific_risk, helper_info.factor_weights, factor_risk)
+riskiest_ten_stocks = find_riskiest_stocks(position_level_risk_attribution_dataframe, 10)
+print(riskiest_ten_stocks)
+riskiest_ten_factors = find_riskiest_factors(factor_risk_attribution_dataframe, 10)
+print(riskiest_ten_factors)
 print("portfolio analysis using optimal weights obtained through efficient frontier")
 print("non factor risk: ", risk)
 print("position based attribution sum :", position_level_risk_attribution.sum())

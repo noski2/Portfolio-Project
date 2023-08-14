@@ -130,7 +130,7 @@ def calculate_factor_risk_attribution(components, weights, specific_risk, factor
     bp2 = factor_weights.T @ weights
     marginal_risk = factor_weights @ (components.cov().to_numpy() @ bp2)
     specific_risk_contribution = specific_risk @ weights
-    attributions = (np.multiply(weights.T, (marginal_risk + specific_risk_contribution)))/variance
+    attributions = (np.multiply(factor_weights.T, (marginal_risk + specific_risk_contribution)))/variance
     attributions_df = pd.DataFrame({'Attributions': attributions})
     return attributions, attributions_df.sort_values(by= 'Attributions')
 
@@ -138,7 +138,7 @@ def find_riskiest_stocks(attributions, n_stocks):
     return (attributions.tail(n_stocks)).to_numpy()
 
 def find_riskiest_factors(attributions, n_factors):
-    return (attributions.tail(n_factors)).to_numpy()
+    return (attributions.tail(n_factors))
 class Helper_Info:
     def __init__(self, df):
         self.components = generate_components(df, 20)
@@ -160,6 +160,7 @@ helper_info = Helper_Info(trimmed_portfolio)
 factor_risk, factor_return = calculate_factor_risk_and_returns(helper_info.components, weights, helper_info.specific_risk, helper_info.factor_weights, helper_info.intercepts)
 position_level_risk_attribution, position_level_risk_attribution_dataframe = calculate_position_risk_attribution(trimmed_portfolio, weights, risk)
 factor_risk_attribution, factor_risk_attribution_dataframe = calculate_factor_risk_attribution(helper_info.components, weights, helper_info.specific_risk, helper_info.factor_weights, factor_risk)
+print(factor_risk_attribution_dataframe)
 riskiest_ten_stocks = find_riskiest_stocks(position_level_risk_attribution_dataframe, 10)
 print(riskiest_ten_stocks)
 riskiest_ten_factors = find_riskiest_factors(factor_risk_attribution_dataframe, 10)
